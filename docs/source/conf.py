@@ -52,6 +52,8 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
     "sphinx": ("https://www.sphinx-doc.org/en/master/", None),
     "nanobind": ("https://nanobind.readthedocs.io/en/stable/", None),
+    "cupy": ("https://docs.cupy.dev/en/stable/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
 }
 intersphinx_disabled_domains = ["std"]
 
@@ -77,7 +79,6 @@ autodoc_default_options = {
     "show-inheritance": True,
     "inherited-members": False,
 }
-# Exclude all torchmdnet.datasets.*.rst files in source/generated/
 html_static_path = ["../_static"]
 html_css_files = [
     "style.css",
