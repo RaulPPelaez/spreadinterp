@@ -46,7 +46,6 @@ napoleon_use_rtype = True
 napoleon_preprocess_types = True
 napoleon_type_aliases = None
 napoleon_attr_annotations = True
-autosummary_ignore_module_all = False
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
@@ -69,11 +68,13 @@ epub_show_urls = "footnote"
 autoclass_content = "both"
 autodoc_typehints = "none"
 autodoc_inherit_docstrings = False
+
 sphinx_autodoc_typehints = True
 html_show_sourcelink = True
 autodoc_default_options = {
     "members": True,
     "member-order": "bysource",
+    "imported-members": True,
     "exclude-members": "__weakref__",
     "undoc-members": False,
     "show-inheritance": True,

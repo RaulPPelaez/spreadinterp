@@ -53,12 +53,12 @@ n : ndarray
 Returns
 -------
 
-interpolated_field : ndarray
+ndarray
     The interpolated field at the points.
 )";
 
 
-NB_MODULE(spreadinterp, m) {
+NB_MODULE(_spreadinterp, m) {
   m.def("interpolateField", &interpolateField_wrapper, "pos"_a, "field"_a,
         "L"_a, "n"_a, interpolate_docstring);
 }

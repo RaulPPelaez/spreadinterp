@@ -22,10 +22,10 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(uammd)
 nanobind_add_module(
-  spreadinterp
+  _spreadinterp
   STABLE_ABI
   src/python_wrapper.cu
 )
-uammd_setup_target(spreadinterp)
-install(TARGETS spreadinterp LIBRARY DESTINATION ${Python_SITEARCH}/${PROJECT_NAME})
+uammd_setup_target(_spreadinterp)
+install(TARGETS _spreadinterp LIBRARY DESTINATION ${Python_SITEARCH}/${PROJECT_NAME})
 install(FILES src/__init__.py DESTINATION ${Python_SITEARCH}/${PROJECT_NAME})
