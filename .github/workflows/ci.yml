@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run every Sunday at midnight
+    - cron:  '0 0 * * 0'
+
+defaults:
+  run:
+    shell: bash -l {0}
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Latest supported versions
+          - name: Linux (CUDA 12)
+    steps:
+    - name: Check out
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        submodules: recursive
+        
+    - name: Show dependency file
+      run: cat environment.yml
+      
+    - name: Install Mamba
+      uses: mamba-org/setup-micromamba@v2
+      with:
+        environment-file: environment.yml
+        cache-environment: false
+        cache-downloads: true
+
+    - name: List environment
+      run: |
+        micromamba activate spreadinterp
+        micromamba list
+
+    - name: Configure and compile the library
+      run: |
+        micromamba activate spreadinterp
+        pip install -vv .
+      
+    - name: Build Sphinx Documentation
+      run: |
+        cd docs
+        make html
+      shell: bash -el {0}
+        
+    - name: Try to import
+      run: |
+        micromamba activate spreadinterp
+        python -c "import spreadinterp
