@@ -59,4 +59,4 @@ jobs:
     - name: Try to import
       run: |
         micromamba activate spreadinterp
-        python -c "import spreadinterp
+        python -c "import spreadinterp"
