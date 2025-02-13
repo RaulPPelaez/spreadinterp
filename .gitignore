@@ -1,6 +1,7 @@
 *cache*
 *generated*
 *compile_commands.json*
+*egg*info*
 build
 *.o
 *.so
