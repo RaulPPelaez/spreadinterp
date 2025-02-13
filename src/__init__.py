@@ -1,1 +1,1 @@
-from .spreadinterp import *
+from .spreadinterp import interpolateField
