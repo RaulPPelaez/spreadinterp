@@ -17,10 +17,9 @@ class CMakeBuild(build_ext):
             self.build_extension(ext)
 
     def build_extension(self, ext):
-        # Install to the current environment
         cmake_args = [
-            f"-DPYTHON_EXECUTABLE={sys.executable}",
             "-DCMAKE_BUILD_TYPE=Release",
+            "-DCMAKE_INSTALL_PREFIX=" + sys.prefix,
         ]
         build_args = ["--config", "Release"]
 
@@ -42,6 +41,6 @@ setup(
     author="Raul P. Pelaez",
     description="Python bindings for interpolate and spread from UAMMD",
     ext_modules=[CMakeExtension("spreadinterp")],
-    cmdclass={"spreadinterp": CMakeBuild},
+    cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
 )
