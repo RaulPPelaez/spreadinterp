@@ -11,11 +11,13 @@ Functionality
 Given a set of particles with positions and properties, spreadinterp allows to apply the following operations:
 
 *Spreading:*
+
 .. math::
 
     \boldsymbol{f}(\boldsymbol{x}) = \mathcal{S}(\boldsymbol{x})\{\boldsymbol{p}\} = \sum_{i=1}^{N} \delta_a(\boldsymbol{x} - \boldsymbol{x}_i) \boldsymbol{p}_i
 
 *Interpolation:*
+
 .. math::
 
     \boldsymbol{p}_i = \mathcal{J}_{\boldsymbol{x}_i}\{\boldsymbol{f}(\boldsymbol{x})\} = \int_V \delta_a(\boldsymbol{x} - \boldsymbol{x}_i) \boldsymbol{f}(\boldsymbol{x}) d\boldsymbol{x}
@@ -32,11 +34,13 @@ Where:
 - :math:`V` is the volume of a particle
 
 These operator are related by the following identity:
+
 .. math::
 
     \mathcal{J}\mathcal{S} = \mathcal{I}
 
 And the spreading kernel follows the familiar Immersed Boundary rules:
+
 .. math::
    
    \int_V \delta_a(\boldsymbol{x} - \boldsymbol{x}_i) d\boldsymbol{x} = 1
