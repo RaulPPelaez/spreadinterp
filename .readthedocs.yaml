@@ -1,0 +1,24 @@
+# .readthedocs.yaml
+# Read the Docs configuration file
+# See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
+
+# Required
+version: 2
+
+submodules:
+  include: all
+  recursive: true
+
+build:
+  os: "ubuntu-22.04"
+  tools:
+     python: "mambaforge-latest"
+  commands:
+    - mamba env create --file environment.yml
+    - mamba run -n spreadinterp pip install -vv .
+    - cd docs && mamba run -n spreadinterp make html
+    - mkdir -p $READTHEDOCS_OUTPUT/
+    - mv ./docs/build/html $READTHEDOCS_OUTPUT/html
+    
+conda:
+  environment: environment.yml
