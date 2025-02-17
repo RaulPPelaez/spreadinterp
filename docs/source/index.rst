@@ -46,6 +46,9 @@ And the spreading kernel follows the familiar Immersed Boundary rules:
    \int_V \delta_a(\boldsymbol{x} - \boldsymbol{x}_i) d\boldsymbol{x} = 1
        
 
+Currently, :math:`\delta_a` is chosen as a 3-point Peskin kernel.
+
+
 .. toctree::
    :hidden:
       

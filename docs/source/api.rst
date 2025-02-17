@@ -6,6 +6,7 @@ API Reference
    :recursive:
    
 
-   spreadinterp.interpolateField
+   spreadinterp.interpolate
+   spreadinterp.spread
 
    
