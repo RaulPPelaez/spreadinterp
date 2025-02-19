@@ -88,7 +88,8 @@ def test_spreadinterp():
 
 @pytest.mark.parametrize("n", [8, 16, 32])
 @pytest.mark.parametrize("numberParticles", [1, 2, 1024])
-def test_interp(n, numberParticles):
+@pytest.mark.parametrize("is2D", [False, True])
+def test_interp(n, numberParticles, is2D):
     L = 16
     pos = cp.array(
         (np.random.rand(numberParticles, 3) - 0.5) * (L - 1.0), dtype=cp.float32
@@ -96,6 +97,12 @@ def test_interp(n, numberParticles):
     field = cp.ones((n, n, n, 3), dtype=pos.dtype)
     L = np.array([L, L, L])
     assert pos.shape == (numberParticles, 3)
+    if is2D:
+        pos[:, 2] = 0
+        L[2] = 0
+        field = field[:, :, 0, :]
+        field = field[:, :, np.newaxis, :]
+        assert field.shape == (n, n, 1, 3)
     res = spreadinterp.interpolate(pos, field, L)
     assert res.shape == (numberParticles, 3)
     assert res.dtype == cp.float32
