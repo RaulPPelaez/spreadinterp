@@ -37,7 +37,9 @@ These operator are related by the following identity:
 
 .. math::
 
-    \mathcal{J}\mathcal{S} = \mathcal{I}
+    \mathcal{J}\mathcal{S} 1 = \int \delta_a^2(\boldsymbol{r})d\boldsymbol{r} = \Delta V^{-1}
+
+where :math:`\Delta V` is an effective "volume" for the particles.    
 
 And the spreading kernel follows the familiar Immersed Boundary rules:
 
@@ -46,7 +48,16 @@ And the spreading kernel follows the familiar Immersed Boundary rules:
    \int_V \delta_a(\boldsymbol{x} - \boldsymbol{x}_i) d\boldsymbol{x} = 1
        
 
-Currently, :math:`\delta_a` is chosen as a 3-point Peskin kernel.
+Currently, :math:`\delta_a` is chosen as a 3-point Peskin kernel, defined as:
+
+.. math::
+
+     \phi_{p_3}(|r|) =  \left\{
+     \begin{aligned}
+     & \frac{1}{3}\left( 1 + \sqrt{1-3r^2}\right)& r < 0.5\\
+     & \frac{1}{6}\left(5-3r-\sqrt{1-3(1-r)^2}\right)& r < 1.5\\
+     & 0 & r>1.5 
+     \end{aligned}\right.
 
 
 .. toctree::
