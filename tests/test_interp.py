@@ -63,11 +63,12 @@ import scipy.integrate as integrate
 
 
 def peskin_integral(h):
-    res = integrate.quad(lambda x: (peskin_3pt(x, h) ** 2), -1.5, 1.5)[0] ** 3
+    res = integrate.quad(lambda x: (peskin_3pt(x, h) ** 2), -1.5, 1.5)[0]
     return res
 
 
-def test_spreadinterp():
+@pytest.mark.parametrize("is2D", [False, True])
+def test_spreadinterp(is2D):
     # JS1 = 1/dV
     # Where dV is the integral of the kernel squared: \int \delta_a(\vec{r})^2 dr^3
     # This test checks that the spread and interpolate functions are adjoint
@@ -78,8 +79,13 @@ def test_spreadinterp():
     quantity = cp.ones((1, 1), dtype=cp.float32)
     L = np.array([L, L, L])
     n = np.array([n, n, n])
+    if is2D:
+        pos[:, 2] = 0
+        L[2] = 0
+        n[2] = 1
     field = spreadinterp.spread(pos, quantity, L, n)
-    dV = peskin_integral(h)
+    dV = peskin_integral(h) ** (2 if is2D else 3)
+
     quantity_reconstructed = spreadinterp.interpolate(pos, field, L) / dV
     assert cp.allclose(
         quantity.get(), quantity_reconstructed.get(), atol=1e-4, rtol=1e-4
