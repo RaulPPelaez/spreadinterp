@@ -36,15 +36,6 @@ void interpolateField_wrapper(const pyarray3_c &ipos, const pyarray_field_c &ifi
   if(ipos.shape(0) != iquantity.shape(0)){
     throw std::runtime_error("Quantity shape does not match pos");
   }
-  if(ipos.shape(1) != 3){
-    throw std::runtime_error("Position shape is not 3");
-  }
-  if(ifield.ndim() != 3){
-    throw std::runtime_error("Field shape is not 3");
-  }
-  if(iquantity.ndim() != 1){
-    throw std::runtime_error("Quantity shape is not 1");
-  }
   auto ni = ifield.shape_ptr();
   real3 L = {Li.view()(0), Li.view()(1), Li.view()(2)};
   int3 n = {int(ni[0]), int(ni[1]), int(ni[2])};
