@@ -43,9 +43,9 @@ def manual_spread(pos, quantity, L, n):
 def test_spread(n, numberParticles, nquantities):
     L = 16
     pos = cp.zeros((numberParticles, 3), dtype=cp.float32)
-    pos = cp.array(
-        (np.random.rand(numberParticles, 3) - 0.5) * (L * 0.5), dtype=cp.float32
-    )
+    # pos = cp.array(
+    #     (np.random.rand(numberParticles, 3) - 0.5) * (L * 0.5), dtype=cp.float32
+    # )
     quantity = cp.ones((numberParticles, nquantities), dtype=cp.float32)
     L = np.array([L, L, L])
     n = np.array([n, n, n])
