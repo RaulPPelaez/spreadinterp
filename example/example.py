@@ -12,7 +12,7 @@ n = np.array([n, n, n])
 
 assert pos.shape == (numberParticles, 3)
 assert field.shape == (n[0], n[1], n[2], 3)
-res = spreadinterp.interpolateField(pos, field, L, n)
+res = spreadinterp.interpolate(pos, field, L)
 
 print(res)
 assert res.shape == (numberParticles, 3)
