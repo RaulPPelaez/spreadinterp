@@ -31,8 +31,16 @@ private:
   const int nx, ny, nz;
 };
 
-void interpolateField_wrapper(const pyarray3_c &ipos, const pyarray_field_c &ifield,
-                              pyarray_c &iquantity, pyarray3f Li) {
+void cudaCheckError() {
+  cudaError_t err = cudaGetLastError();
+  if (err != cudaSuccess) {
+    std::cerr << "CUDA error: " << cudaGetErrorString(err) << std::endl;
+    throw std::runtime_error("CUDA error: " + std::string(cudaGetErrorString(err)));
+  }
+}
+
+void interpolateField_wrapper(pyarray3_c ipos, pyarray_field_c ifield,
+                              pyarray_c iquantity, pyarray3f Li) {
   if(ipos.shape(0) != iquantity.shape(0)){
     throw std::runtime_error("Quantity shape does not match pos");
   }
@@ -46,6 +54,7 @@ void interpolateField_wrapper(const pyarray3_c &ipos, const pyarray_field_c &ifi
   ibm.gather(reinterpret_cast<real3*>(ipos.data()),
 	     reinterpret_cast<real*>(iquantity.data()),
 	     reinterpret_cast<real*>(ifield.data()), int(ipos.shape(0)));
+  cudaCheckError();
 }
 
 auto spreadParticles_wrapper(pyarray3_c ipos, pyarray_c iquantity,
@@ -64,11 +73,8 @@ auto spreadParticles_wrapper(pyarray3_c ipos, pyarray_c iquantity,
   ibm.spread(reinterpret_cast<real3*>(ipos.data()),
 	     reinterpret_cast<real*>(iquantity.data()),
 	     reinterpret_cast<real*>(ifield.data()), int(ipos.shape(0)));
+  cudaCheckError();
 }
-
-// constexpr const char *interpolate_docstring = R" ";
-
-// constexpr const char *spread_docstring = R"()";
 
 NB_MODULE(_spreadinterp, m) {
   m.def("interpolateField", &interpolateField_wrapper, "pos"_a, "field"_a,
