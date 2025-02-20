@@ -6,4 +6,3 @@
 
 using namespace uammd;
 using real = uammd::real;
-using Kernel = IBM_kernels::Peskin::threePoint;

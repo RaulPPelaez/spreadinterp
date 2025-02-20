@@ -21,15 +21,17 @@ def peskin_3pt(rp, h):
 
 
 def manual_spread(pos, quantity, L, n):
-    h = L[0] / n[0]
+    h = L / n
     field = cp.zeros((n[0], n[1], n[2], quantity.shape[1]), dtype=cp.float32)
     for i in range(pos.shape[0]):
-        node_centers = cp.linspace(0, L[0], n[0], endpoint=False) - L[0] / 2.0 + h / 2.0
-        x, y, z = cp.meshgrid(node_centers, node_centers, node_centers)
+        n_x = cp.linspace(0, L[0], n[0], endpoint=False) - L[0] / 2.0 + h[0] / 2.0
+        n_y = cp.linspace(0, L[1], n[1], endpoint=False) - L[1] / 2.0 + h[1] / 2.0
+        n_z = cp.linspace(0, L[2], n[2], endpoint=False) - L[2] / 2.0 + h[2] / 2.0
+        x, y, z = cp.meshgrid(n_x, n_y, n_z)
         xp = x - pos[i, 0]
         yp = y - pos[i, 1]
         zp = z - pos[i, 2]
-        delta = peskin_3pt(xp, h) * peskin_3pt(yp, h) * peskin_3pt(zp, h)
+        delta = peskin_3pt(xp, h[0]) * peskin_3pt(yp, h[1]) * peskin_3pt(zp, h[2])
         field += (
             delta[:, :, :, cp.newaxis]
             * quantity[i, :][cp.newaxis, cp.newaxis, cp.newaxis]
@@ -68,23 +70,28 @@ def peskin_integral(h):
 
 
 @pytest.mark.parametrize("is2D", [False, True])
-def test_spreadinterp(is2D):
+@pytest.mark.parametrize("nonregular", [False, True])
+def test_spreadinterp(is2D, nonregular):
     # JS1 = 1/dV
     # Where dV is the integral of the kernel squared: \int \delta_a(\vec{r})^2 dr^3
     # This test checks that the spread and interpolate functions are adjoint
     L = 16
     n = 64
-    h = L / n
     pos = cp.array([[0.0, 0.0, 0.0]], dtype=cp.float32)
     quantity = cp.ones((1, 1), dtype=cp.float32)
-    L = np.array([L, L, L])
-    n = np.array([n, n, n])
+    # Factor is a number between 0.5 and 2
+    factor = (np.random.rand() * 1.5 + 0.5) if nonregular else 1.0
+    L = np.array([L, L * factor, L])
+    n = np.array([n, int(n * factor), n])
+    h = L / n
     if is2D:
         pos[:, 2] = 0
         L[2] = 0
         n[2] = 1
     field = spreadinterp.spread(pos, quantity, L, n)
-    dV = peskin_integral(h) ** (2 if is2D else 3)
+    dV = peskin_integral(h[0]) * peskin_integral(h[1])
+    if not is2D:
+        dV *= peskin_integral(h[2])
 
     quantity_reconstructed = spreadinterp.interpolate(pos, field, L) / dV
     assert cp.allclose(
