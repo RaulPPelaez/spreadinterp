@@ -7,6 +7,15 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 
 
+def gen_grid_positions(n, L):
+    h = L / n
+    n_x = cp.linspace(0, L[0], n[0], endpoint=False) - L[0] / 2.0 + h[0] / 2.0
+    n_y = cp.linspace(0, L[1], n[1], endpoint=False) - L[1] / 2.0 + h[1] / 2.0
+    n_z = cp.linspace(0, L[2], n[2], endpoint=False) - L[2] / 2.0 + h[2] / 2.0
+    x, y, z = cp.meshgrid(n_x, n_y, n_z, indexing="ij")
+    return x, y, z
+
+
 def peskin_3pt(rp, h):
     """Computes the 3-point Peskin kernel for a given r."""
     rp = cp.asarray(rp)
@@ -22,10 +31,7 @@ def peskin_3pt(rp, h):
 def manual_spread(pos, quantity, L, n):
     h = L / n
     field = cp.zeros((n[0], n[1], n[2], quantity.shape[1]), dtype=cp.float32)
-    n_x = cp.linspace(0, L[0], n[0], endpoint=False) - L[0] / 2.0 + h[0] / 2.0
-    n_y = cp.linspace(0, L[1], n[1], endpoint=False) - L[1] / 2.0 + h[1] / 2.0
-    n_z = cp.linspace(0, L[2], n[2], endpoint=False) - L[2] / 2.0 + h[2] / 2.0
-    x, y, z = cp.meshgrid(n_x, n_y, n_z, indexing="ij")
+    x, y, z = gen_grid_positions(n, L)
     for i in range(pos.shape[0]):
         xp = x - pos[i, 0]
         yp = y - pos[i, 1]
@@ -39,10 +45,7 @@ def manual_spread(pos, quantity, L, n):
 
 def manual_interp(pos, field, L):
     h = L / field.shape[:3]
-    n_x = cp.linspace(0, L[0], field.shape[0], endpoint=False) - L[0] / 2.0 + h[0] / 2.0
-    n_y = cp.linspace(0, L[1], field.shape[1], endpoint=False) - L[1] / 2.0 + h[1] / 2.0
-    n_z = cp.linspace(0, L[2], field.shape[2], endpoint=False) - L[2] / 2.0 + h[2] / 2.0
-    x, y, z = cp.meshgrid(n_x, n_y, n_z, indexing="ij")
+    x, y, z = gen_grid_positions(field.shape[:3], L)
     quantity = cp.zeros((pos.shape[0], field.shape[3]), dtype=cp.float32)
     qw = h[0] * h[1]
     if field.shape[2] > 1:
@@ -146,3 +149,64 @@ def test_interp(n, numberParticles, is2D, nquantities):
     assert cp.allclose(res.get(), expected.get(), atol=1e-5, rtol=1e-5), cp.max(
         res.get() - expected.get()
     )
+
+
+def test_interp_gradient_constant():
+    # Interpolate a constant field on a particle located at the center. The result should be zero
+    L = 16
+    n = 64
+    pos = cp.array([[0.0, 0.0, 0.0]], dtype=cp.float32)
+    field = cp.ones((n, n, n, 3), dtype=cp.float32)
+    direction = cp.ones_like(pos) * cp.array([1, 0, 0])
+    L = np.array([L, L, L])
+    gradient = spreadinterp.interpolate(
+        pos, field, L, gradient=True, gradient_direction=direction
+    )
+    assert gradient.shape == pos.shape
+    assert cp.allclose(gradient, 0.0, atol=1e-5, rtol=1e-5)
+
+
+@pytest.mark.parametrize("direction", [0, 1, 2])
+def test_interp_gradient_linear(direction):
+    # Interpolate a field f(x,y,z) = x on a particle located at the center. The gradient should be [1, 0, 0]
+    L = np.array([16, 16, 16])
+    n = np.array([64, 64, 64])
+    pos = cp.array([[0.0, 0.0, 0.0]], dtype=cp.float32)
+    x, y, z = gen_grid_positions(n, L)
+    field = cp.zeros((n[0], n[1], n[2], 3), dtype=cp.float32)
+    f = x if direction == 0 else y if direction == 1 else z
+    field[..., direction] = f
+    d = cp.zeros(3)
+    d[direction] = 1
+    direction = cp.ones_like(pos) * d
+    assert direction.shape == pos.shape
+    assert field.shape == (n[0], n[1], n[2], 3)
+    gradient = spreadinterp.interpolate(
+        pos, field, L, gradient=True, gradient_direction=direction
+    )
+    assert gradient.shape == pos.shape
+    assert cp.allclose(gradient, d, atol=1e-5, rtol=1e-5)
+
+
+def test_interp_gradient_radial():
+    # Interpolate a field f(x,y,z) = sqrt(x^2 + y^2 + z^2) on a particle located at the center. The gradient should be [x, y, z]/r
+    L = np.array([16, 16, 16])
+    n = np.array([64, 64, 64])
+    h = L / n
+    pos = cp.array([[-5, -5, -5]], dtype=cp.float32)
+    x, y, z = gen_grid_positions(n, L)
+    f = cp.sqrt(x**2 + y**2 + z**2)
+    field = cp.zeros((n[0], n[1], n[2], 3), dtype=cp.float32)
+    field[..., 0] = f
+    d = cp.array([1, 1, 1])
+    direction = cp.ones_like(pos) * d
+    assert direction.shape == pos.shape
+    assert field.shape == (n[0], n[1], n[2], 3)
+    gradient = spreadinterp.interpolate(
+        pos, field, L, gradient=True, gradient_direction=direction
+    )
+    assert gradient.shape == pos.shape
+    r = cp.linalg.norm(pos)
+    expected = cp.dot((pos / r), d)
+    assert gradient.shape == (1, 3)
+    assert cp.allclose(gradient, expected, atol=1e-5, rtol=1e-5)
