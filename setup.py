@@ -3,19 +3,6 @@ import sys
 import subprocess
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
-import git
-
-
-def get_latest_git_tag(repo_path="."):
-    repo = git.Repo(repo_path)
-    tags = sorted(repo.tags, key=lambda t: t.commit.committed_datetime)
-    return tags[-1].name if tags else None
-
-
-current_tag = get_latest_git_tag(".")
-if current_tag is None:
-    current_tag = "master"
-version = current_tag
 
 
 class CMakeExtension(Extension):
@@ -50,7 +37,7 @@ class CMakeBuild(build_ext):
 
 setup(
     name="spreadinterp",
-    version=version,
+    version="0.1.0",
     author="Raul P. Pelaez",
     description="Python bindings for interpolate and spread from UAMMD",
     ext_modules=[CMakeExtension("spreadinterp")],
