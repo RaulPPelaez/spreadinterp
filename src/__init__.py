@@ -79,6 +79,10 @@ def spread(
     assert quantity.ndim <= 2, "quantity must have at most 2 dimensions"
     if quantity.ndim == 1:
         quantity = cp.ascontiguousarray(quantity[:, cp.newaxis]).astype(cp.float32)
+    if gradient:
+        assert (
+            quantity.shape[1] == 3
+        ), "quantity must have 3 components for gradient mode"
     result = cp.zeros((n[0], n[1], n[2], quantity.shape[-1]), dtype=cp.float32)
     spreadParticles(pos, quantity, result, L, n, gradient, gradient_direction)
     return result
