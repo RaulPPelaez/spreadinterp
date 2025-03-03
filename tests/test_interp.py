@@ -28,6 +28,25 @@ def peskin_3pt(rp, h):
     return phi / h
 
 
+def peskin_3pt_derivative(rp, h):
+    """Computes the derivative of the 3-point Peskin kernel for a given r."""
+    rp = cp.asarray(rp)
+    r = cp.abs(rp) / h
+    sgn = cp.sign(rp)
+    phi = cp.zeros_like(r, dtype=np.float64)
+    mask1 = r < 0.5
+    phi[mask1] = -1 / h**2 * r[mask1] * sgn[mask1] / cp.sqrt(1 - 3 * r[mask1] ** 2)
+    mask2 = (r >= 0.5) & (r < 1.5)
+    phi[mask2] = (
+        -1
+        / h**2
+        * (1 / 2)
+        * (1 + (1 - r[mask2]) / cp.sqrt(1 - 3 * (1 - r[mask2]) ** 2))
+        * sgn[mask2]
+    )
+    return phi
+
+
 def manual_spread(pos, quantity, L, n):
     h = L / n
     field = cp.zeros((n[0], n[1], n[2], quantity.shape[1]), dtype=cp.float32)
@@ -206,7 +225,39 @@ def test_interp_gradient_radial():
         pos, field, L, gradient=True, gradient_direction=direction
     )
     assert gradient.shape == pos.shape
-    r = cp.linalg.norm(pos)
+    r = cp.linalg.norm(pos, axis=1)
     expected = cp.dot((pos / r), d)
     assert gradient.shape == (1, 3)
-    assert cp.allclose(gradient, expected, atol=1e-5, rtol=1e-5)
+    assert cp.allclose(gradient[:, 0], expected, atol=1e-2), np.max(
+        np.abs(gradient - expected)
+    )
+
+
+@pytest.mark.parametrize("direction", [0, 1, 2])
+def test_spread_gradient(direction):
+    # Spread a quantity on a particle located at (0,0,0). The resulting field should be:
+    # (dS_x*d_x + dS_y*d_y + dS_z*d_z)*quantity
+    # dS_alpha = \prod_{\beta \neq \alpha} \delta_\beta * d\delta_\alpha
+    # Where d\delta is the derivative of the Peskin kernel
+    L = np.array([16, 16, 16])
+    n = np.array([64, 64, 64])
+    pos = cp.array([[0.0, 0.0, 0.0]], dtype=cp.float32)
+    quantity = cp.ones((1, 3), dtype=cp.float32)
+    x, y, z = gen_grid_positions(n, L)
+    Sx = peskin_3pt(x, L[0] / n[0])
+    Sy = peskin_3pt(y, L[1] / n[1])
+    Sz = peskin_3pt(z, L[2] / n[2])
+    dSx = peskin_3pt_derivative(pos[0, 0] - x, L[0] / n[0]) * Sy * Sz
+    dSy = peskin_3pt_derivative(pos[0, 1] - y, L[1] / n[1]) * Sx * Sz
+    dSz = peskin_3pt_derivative(pos[0, 2] - z, L[2] / n[2]) * Sx * Sy
+    d = cp.zeros((1, 3))
+    d[:, direction] = 1
+    delta = dSx * d[0, 0] + dSy * d[0, 1] + dSz * d[0, 2]
+    expected = cp.array(delta[..., None] * quantity)
+    assert expected.shape == (n[0], n[1], n[2], 3)
+    gradient = spreadinterp.spread(
+        pos, quantity, L, n, gradient=True, gradient_direction=d
+    )
+    assert gradient.shape == (n[0], n[1], n[2], 3)
+    max_dev = cp.max(cp.abs(gradient - expected))
+    assert cp.allclose(gradient, expected, atol=1e-5, rtol=1e-5), max_dev

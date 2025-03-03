@@ -95,7 +95,7 @@ private:
   bool is2D;
 };
 
-struct GradientWeightCompute {
+struct GradientInterpolationWeightCompute {
   template <class T2>
   inline __device__ real3 operator()(real quantity,
                                      thrust::tuple<T2, T2, T2> kernel) const {
@@ -104,6 +104,22 @@ struct GradientWeightCompute {
     auto [phiZ, dphiZ] = thrust::get<2>(kernel);
     real3 delta = {phiY * phiZ * dphiX, phiX * phiZ * dphiY,
                    phiX * phiY * dphiZ};
+    return delta * quantity;
+  }
+};
+
+struct GradientSpreadWeightCompute {
+  template <class T2>
+  inline __device__ real3 operator()(thrust::tuple<real3, real3> iquantity,
+                                     thrust::tuple<T2, T2, T2> kernel) const {
+    auto [phiX, dphiX] = thrust::get<0>(kernel);
+    auto [phiY, dphiY] = thrust::get<1>(kernel);
+    auto [phiZ, dphiZ] = thrust::get<2>(kernel);
+    real3 quantity = thrust::get<1>(iquantity);
+    real3 direction = thrust::get<0>(iquantity);
+    real delta = phiY * phiZ * dphiX * direction.x +
+                 phiX * phiZ * dphiY * direction.y +
+                 phiX * phiY * dphiZ * direction.z;
     return delta * quantity;
   }
 };
@@ -198,9 +214,6 @@ void interpolateField_gradient(pyarray3_c ipos, pyarray_field_c ifield,
   if (iquantity.shape(1) != 3) {
     throw std::runtime_error("Quantity must be 3D");
   }
-  // if (ifield.shape(3) != 3) {
-  //   throw std::runtime_error("Field must be 3D");
-  // }
   if (idirection.shape(0) != ipos.shape(0)) {
     throw std::runtime_error(
         "Gradient direction must have same number of particles as pos");
@@ -211,7 +224,7 @@ void interpolateField_gradient(pyarray3_c ipos, pyarray_field_c ifield,
   auto kernel = std::make_shared<GradientKernel>(cellSize, n.z == 1);
   Grid grid(Box(L), n);
   IBM<GradientKernel, Grid, LinearIndex3D> ibm(kernel, grid);
-  auto wc = GradientWeightCompute();
+  auto wc = GradientInterpolationWeightCompute();
   auto qw = IBM_ns::DefaultQuadratureWeights();
   auto q_it = reinterpret_cast<real *>(iquantity.data());
   auto d_ptr = reinterpret_cast<real3 *>(idirection.data());
@@ -245,12 +258,12 @@ void interpolateField_wrapper(pyarray3_c ipos, pyarray_field_c ifield,
   real3 L = {Li.view()(0), Li.view()(1), Li.view()(2)};
   if (!gradient) {
     interpolateField_direct(ipos, ifield, iquantity, L);
-  }
-  else {
+  } else {
     if (!gradient_direction.has_value()) {
       throw std::runtime_error("Gradient direction must be provided");
     }
-    interpolateField_gradient(ipos, ifield, iquantity, gradient_direction.value(), L);
+    interpolateField_gradient(ipos, ifield, iquantity,
+                              gradient_direction.value(), L);
   }
 }
 
@@ -267,6 +280,31 @@ void spreadParticles_direct(pyarray3_c ipos, pyarray_c iquantity,
   dispatchWithReal(spread, ifield, iquantity);
   cudaCheckError();
 }
+
+void spreadParticles_gradient(pyarray3_c ipos, pyarray_c iquantity,
+                              pyarray_field_c ifield, pyarray3_c idirection,
+                              real3 L, int3 n) {
+  if (iquantity.shape(1) != 3) {
+    throw std::runtime_error("Quantity must be 3D");
+  }
+  if (idirection.shape(0) != ipos.shape(0)) {
+    throw std::runtime_error(
+        "Gradient direction must have same number of particles as pos");
+  }
+  real3 cellSize = L / make_real3(n);
+  auto kernel = std::make_shared<GradientKernel>(cellSize, n.z == 1);
+  Grid grid(Box(L), n);
+  IBM<GradientKernel, Grid, LinearIndex3D> ibm(kernel, grid);
+  auto wc = GradientSpreadWeightCompute();
+  auto q_it = reinterpret_cast<real3 *>(iquantity.data());
+  auto d_ptr = reinterpret_cast<real3 *>(idirection.data());
+  auto dq_it = thrust::make_zip_iterator(thrust::make_tuple(d_ptr, q_it));
+  auto f_it = reinterpret_cast<real3 *>(ifield.data());
+  ibm.spread(reinterpret_cast<real3 *>(ipos.data()), dq_it, f_it, wc,
+             int(ipos.shape(0)));
+  cudaCheckError();
+}
+
 void spreadParticles_wrapper(pyarray3_c ipos, pyarray_c iquantity,
                              pyarray_field_c ifield, pyarray3f Li, pyarray3i ni,
                              bool gradient,
@@ -281,6 +319,9 @@ void spreadParticles_wrapper(pyarray3_c ipos, pyarray_c iquantity,
   int3 n = {ni.view()(0), ni.view()(1), ni.view()(2)};
   if (!gradient)
     spreadParticles_direct(ipos, iquantity, ifield, L, n);
+  else
+    spreadParticles_gradient(ipos, iquantity, ifield,
+                             gradient_direction.value(), L, n);
 }
 
 NB_MODULE(_spreadinterp, m) {
