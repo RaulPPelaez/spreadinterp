@@ -10,13 +10,13 @@ Functionality
 
 Given a set of particles with positions and properties, spreadinterp allows to apply the following operations:
 
-*Spreading:*
+**Spreading:**
 
 .. math::
 
     \boldsymbol{f}(\boldsymbol{x}) = \mathcal{S}(\boldsymbol{x})\{\boldsymbol{p}\} = \sum_{i=1}^{N} \delta_a(\boldsymbol{x} - \boldsymbol{x}_i) \boldsymbol{p}_i
 
-*Interpolation:*
+**Interpolation:**
 
 .. math::
 
@@ -58,6 +58,46 @@ Currently, :math:`\delta_a` is chosen as a 3-point Peskin kernel, defined as:
      & \frac{1}{6}\left(5-3r-\sqrt{1-3(1-r)^2}\right)& r < 1.5\\
      & 0 & r>1.5 
      \end{aligned}\right.
+
+
+Gradient spreading and interpolation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The library also allows to spread dipoles and interpolate gradients of fields by making use of the following operations:
+
+**Gradient Interpolation:**
+
+.. math::
+
+    \boldsymbol{p'}_i = \mathcal{J}_{\boldsymbol{x}_i}\left(\partial_\boldsymbol{x}\boldsymbol{f}(\boldsymbol{x})\cdot\boldsymbol{d}_i\right) = \int_V \delta_a(\boldsymbol{x} - \boldsymbol{x}_i) \partial_{\boldsymbol{x}} \boldsymbol{f}(\boldsymbol{x})\cdot \boldsymbol{d}_i d\boldsymbol{x} = \int_V \left[\partial_\boldsymbol{x}\delta_a(\boldsymbol{x} - \boldsymbol{x}_i)\cdot \boldsymbol{d}_i\right] \boldsymbol{f}(\boldsymbol{x}) d\boldsymbol{x}
+    
+Where:
+
+- :math:`\boldsymbol{d}_i` is a direction vector
+- :math:`\partial_\boldsymbol{x}\delta_a(\boldsymbol{x} - \boldsymbol{x}_i)` is the gradient of the spreading kernel in the direction of :math:`\boldsymbol{x}`.
+
+.. note::
+   
+   This evaluates the gradient of a vector field in a particle position for a given direction. The gradient of a vector field is a tensor, which is then multiplied by a direction tensor to obtain a vector, in particular:
+
+   .. math::
+
+      \left(\partial_\boldsymbol{x}\boldsymbol{f}(\boldsymbol{x})\cdot \boldsymbol{d}_i\right)_{\alpha} = \partial_{x} f_\alpha d^x_i + \partial_{y} f_\alpha d^y_i + \partial_{z} f_\alpha d^z_i
+
+
+**Dipole spreading**
+
+.. math::
+
+    \boldsymbol{f'}(\boldsymbol{x}) = \partial_{\boldsymbol{x}}\mathcal{S}(\boldsymbol{x})\{\boldsymbol{d}\otimes\boldsymbol{p}\} = \sum_{i=1}^{N} \left(\partial_{\boldsymbol{x}}\delta_a(\boldsymbol{x} - \boldsymbol{x}_i)\cdot\boldsymbol{d}_i\right) \boldsymbol{p}_i
+
+.. note::
+   
+   This spreads a particle quantity into a dipole field at a given position and direction. The gradient of the spreading kernel (a vector) is multiplied by the dipole direction to obtain an scalar, which is then multiplied by the particle property to obtain the dipole field. In particular
+
+   .. math::
+
+      \left(\partial_{\boldsymbol{x}}\delta_a(\boldsymbol{x} - \boldsymbol{x}_i)\cdot\boldsymbol{d}_i\right) = \partial_{x} \delta_a(\boldsymbol{x} - \boldsymbol{x}_i) d^x_i + \partial_{y} \delta_a(\boldsymbol{x} - \boldsymbol{x}_i) d^y_i + \partial_{z} \delta_a(\boldsymbol{x} - \boldsymbol{x}_i) d^z_i
 
 
 .. toctree::

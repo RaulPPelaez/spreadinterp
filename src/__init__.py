@@ -1,9 +1,15 @@
 from ._spreadinterp import interpolateField, spreadParticles
 import cupy as cp
-from typing import List
+from typing import List, Optional
 
 
-def interpolate(pos: cp.ndarray, grid_data: cp.ndarray, L: List) -> cp.ndarray:
+def interpolate(
+    pos: cp.ndarray,
+    grid_data: cp.ndarray,
+    L: List,
+    gradient: bool = False,
+    gradient_direction: Optional[List] = None,
+) -> cp.ndarray:
     """Interpolate a field defined on a grid to a set of points.
        Field is assumed to be defined on a regular grid with periodic boundary conditions.
        The grid points are defined in the range [-L+h, L+h]*0.5 in each direction
@@ -17,6 +23,10 @@ def interpolate(pos: cp.ndarray, grid_data: cp.ndarray, L: List) -> cp.ndarray:
         The field to interpolate. Shape (n[0], n[1], n[2], nf).
     L : ndarray
         The box size. Shape (3,).
+    gradient : bool
+        Whether to interpolate using the gradient of the kernel.
+    gradient_direction : ndarray
+        The direction of the gradient. Shape (3,).
 
     Returns
     -------
@@ -26,21 +36,22 @@ def interpolate(pos: cp.ndarray, grid_data: cp.ndarray, L: List) -> cp.ndarray:
     """
     assert grid_data.ndim >= 3, "grid_data must have at least 3 dimensions"
     assert grid_data.ndim <= 4, "grid_data must have at most 4 dimensions"
-    if len(grid_data.shape) > 3:
-        result = cp.empty((pos.shape[0], grid_data.shape[-1]), dtype=cp.float32)
-        for i in range(grid_data.shape[-1]):
-            gi = cp.ascontiguousarray(grid_data[:, :, :, i], dtype=cp.float32)
-            ri = cp.zeros((pos.shape[0]), dtype=cp.float32)
-            interpolateField(pos, gi, ri, L)
-            result[:, i] = ri
-        return result
-    else:
-        result = cp.zeros((pos.shape[0]), dtype=cp.float32)
-        interpolateField(pos, grid_data, result, L)
-        return result
+    if grid_data.ndim == 3:
+        grid_data = cp.ascontiguousarray(grid_data[:, :, :, cp.newaxis])
+    nf = grid_data.shape[3]
+    result = cp.zeros((pos.shape[0], nf), dtype=cp.float32)
+    interpolateField(pos, grid_data, result, L, gradient, gradient_direction)
+    return result
 
 
-def spread(pos: cp.ndarray, quantity: cp.ndarray, L: List, n: List) -> cp.ndarray:
+def spread(
+    pos: cp.ndarray,
+    quantity: cp.ndarray,
+    L: List,
+    n: List,
+    gradient=False,
+    gradient_direction: Optional[List] = None,
+) -> cp.ndarray:
     """
     Spread a quantity defined at a set of points to a grid.
     Quantity is assumed to be defined at a set of points.
@@ -56,22 +67,22 @@ def spread(pos: cp.ndarray, quantity: cp.ndarray, L: List, n: List) -> cp.ndarra
         The box size. Shape (3,)
     n : ndarray
         The number of grid points in each direction. Shape (3,)
-
+    gradient : bool
+        Whether to spread using the gradient of the kernel.
+    gradient_direction : ndarray
+        The direction of the gradient. Shape (3,).
     Returns
     -------
     ndarray
         The spread quantity on the grid. Shape (n[0], n[1], n[2], Nq).
     """
     assert quantity.ndim <= 2, "quantity must have at most 2 dimensions"
-    if len(quantity.shape) > 1:
-        result = cp.empty((n[0], n[1], n[2], quantity.shape[-1]), dtype=cp.float32)
-        for i in range(quantity.shape[-1]):
-            qi = cp.ascontiguousarray(quantity[:, i], dtype=cp.float32)
-            ri = cp.zeros((n[0], n[1], n[2]), dtype=cp.float32)
-            spreadParticles(pos, qi, ri, L, n)
-            result[:, :, :, i] = ri
-        return result
-    else:
-        result = cp.ascontiguousarray(cp.zeros((n[0], n[1], n[2]), dtype=cp.float32))
-        spreadParticles(pos, quantity, result, L, n)
-        return result
+    if quantity.ndim == 1:
+        quantity = cp.ascontiguousarray(quantity[:, cp.newaxis]).astype(cp.float32)
+    if gradient:
+        assert (
+            quantity.shape[1] == 3
+        ), "quantity must have 3 components for gradient mode"
+    result = cp.zeros((n[0], n[1], n[2], quantity.shape[-1]), dtype=cp.float32)
+    spreadParticles(pos, quantity, result, L, n, gradient, gradient_direction)
+    return result
