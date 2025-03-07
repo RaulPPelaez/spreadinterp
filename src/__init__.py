@@ -1,6 +1,7 @@
 from ._spreadinterp import interpolateField, spreadParticles
 import cupy as cp
 from typing import List, Optional
+import numpy as np
 
 
 def interpolate(
@@ -36,6 +37,10 @@ def interpolate(
     """
     assert grid_data.ndim >= 3, "grid_data must have at least 3 dimensions"
     assert grid_data.ndim <= 4, "grid_data must have at most 4 dimensions"
+    if isinstance(pos, np.ndarray):
+        pos = cp.array(pos)
+    if isinstance(grid_data, np.ndarray):
+        grid_data = cp.array(grid_data)
     if grid_data.ndim == 3:
         grid_data = cp.ascontiguousarray(grid_data[:, :, :, cp.newaxis])
     nf = grid_data.shape[3]
@@ -83,6 +88,10 @@ def spread(
         assert (
             quantity.shape[1] == 3
         ), "quantity must have 3 components for gradient mode"
+    if isinstance(pos, np.ndarray):
+        pos = cp.array(pos)
+    if isinstance(quantity, np.ndarray):
+        quantity = cp.array(quantity)
     result = cp.zeros((n[0], n[1], n[2], quantity.shape[-1]), dtype=cp.float32)
     spreadParticles(pos, quantity, result, L, n, gradient, gradient_direction)
     return result
