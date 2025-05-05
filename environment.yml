@@ -4,6 +4,7 @@ channels:
 dependencies:
   - python
   - pip
+  - cuda-version<12.8
   - cuda-libraries-dev
   - cuda-nvcc
   - cuda-cudart
