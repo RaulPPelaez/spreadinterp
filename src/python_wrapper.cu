@@ -109,17 +109,17 @@ struct GradientInterpolationWeightCompute {
 };
 
 struct GradientSpreadWeightCompute {
-  template <class T2>
-  inline __device__ real3 operator()(thrust::tuple<real3, real3> iquantity,
-                                     thrust::tuple<T2, T2, T2> kernel) const {
+  template <typename T, typename T2>
+  inline __device__ T operator()(thrust::tuple<real3, T> iquantity,
+                                 thrust::tuple<T2, T2, T2> kernel) const {
     auto [phiX, dphiX] = thrust::get<0>(kernel);
     auto [phiY, dphiY] = thrust::get<1>(kernel);
     auto [phiZ, dphiZ] = thrust::get<2>(kernel);
-    real3 quantity = thrust::get<1>(iquantity);
-    real3 direction = thrust::get<0>(iquantity);
-    real delta = phiY * phiZ * dphiX * direction.x +
-                 phiX * phiZ * dphiY * direction.y +
-                 phiX * phiY * dphiZ * direction.z;
+    const auto quantity = thrust::get<1>(iquantity);
+    const real3 direction = thrust::get<0>(iquantity);
+    const real delta = phiY * phiZ * dphiX * direction.x +
+                       phiX * phiZ * dphiY * direction.y +
+                       phiX * phiY * dphiZ * direction.z;
     return delta * quantity;
   }
 };
@@ -284,9 +284,6 @@ void spreadParticles_direct(pyarray3_c ipos, pyarray_c iquantity,
 void spreadParticles_gradient(pyarray3_c ipos, pyarray_c iquantity,
                               pyarray_field_c ifield, pyarray3_c idirection,
                               real3 L, int3 n) {
-  if (iquantity.shape(1) != 3) {
-    throw std::runtime_error("Quantity must be 3D");
-  }
   if (idirection.shape(0) != ipos.shape(0)) {
     throw std::runtime_error(
         "Gradient direction must have same number of particles as pos");
@@ -295,14 +292,24 @@ void spreadParticles_gradient(pyarray3_c ipos, pyarray_c iquantity,
   auto kernel = std::make_shared<GradientKernel>(cellSize, n.z == 1);
   Grid grid(Box(L), n);
   IBM<GradientKernel, Grid, LinearIndex3D> ibm(kernel, grid);
-  auto wc = GradientSpreadWeightCompute();
-  auto q_it = reinterpret_cast<real3 *>(iquantity.data());
   auto d_ptr = reinterpret_cast<real3 *>(idirection.data());
-  auto dq_it = thrust::make_zip_iterator(thrust::make_tuple(d_ptr, q_it));
-  auto f_it = reinterpret_cast<real3 *>(ifield.data());
-  ibm.spread(reinterpret_cast<real3 *>(ipos.data()), dq_it, f_it, wc,
-             int(ipos.shape(0)));
-  cudaCheckError();
+  auto wc = GradientSpreadWeightCompute();
+  for (int i = 0; i < ifield.shape(3); i++) {
+    auto q_it_i = reinterpret_cast<real *>(iquantity.data());
+    auto q_it = thrust::make_permutation_iterator(
+        q_it_i,
+        thrust::make_transform_iterator(thrust::make_counting_iterator(0),
+                                        Permute(ifield.shape(3), i)));
+    auto dq_it = thrust::make_zip_iterator(thrust::make_tuple(d_ptr, q_it));
+    // auto f_it = reinterpret_cast<real *>(ifield.data());
+    auto f_it = thrust::make_permutation_iterator(
+        reinterpret_cast<real *>(ifield.data()),
+        thrust::make_transform_iterator(thrust::make_counting_iterator(0),
+                                        Permute(ifield.shape(3), i)));
+    ibm.spread(reinterpret_cast<real3 *>(ipos.data()), dq_it, f_it, wc,
+               int(ipos.shape(0)));
+    cudaCheckError();
+  }
 }
 
 void spreadParticles_wrapper(pyarray3_c ipos, pyarray_c iquantity,

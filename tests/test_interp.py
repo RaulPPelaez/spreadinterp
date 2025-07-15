@@ -234,7 +234,8 @@ def test_interp_gradient_radial():
 
 
 @pytest.mark.parametrize("direction", [0, 1, 2])
-def test_spread_gradient(direction):
+@pytest.mark.parametrize("dimensions", [1, 3])
+def test_spread_gradient(direction, dimensions):
     # Spread a quantity on a particle located at (0,0,0). The resulting field should be:
     # (dS_x*d_x + dS_y*d_y + dS_z*d_z)*quantity
     # dS_alpha = \prod_{\beta \neq \alpha} \delta_\beta * d\delta_\alpha
@@ -242,7 +243,7 @@ def test_spread_gradient(direction):
     L = np.array([16, 16, 16])
     n = np.array([64, 64, 64])
     pos = cp.array([[0.0, 0.0, 0.0]], dtype=cp.float32)
-    quantity = cp.ones((1, 3), dtype=cp.float32)
+    quantity = cp.ones((1, dimensions), dtype=cp.float32)
     x, y, z = gen_grid_positions(n, L)
     Sx = peskin_3pt(x, L[0] / n[0])
     Sy = peskin_3pt(y, L[1] / n[1])
@@ -254,10 +255,10 @@ def test_spread_gradient(direction):
     d[:, direction] = 1
     delta = dSx * d[0, 0] + dSy * d[0, 1] + dSz * d[0, 2]
     expected = cp.array(delta[..., None] * quantity)
-    assert expected.shape == (n[0], n[1], n[2], 3)
+    assert expected.shape == (n[0], n[1], n[2], dimensions)
     gradient = spreadinterp.spread(
         pos, quantity, L, n, gradient=True, gradient_direction=d
     )
-    assert gradient.shape == (n[0], n[1], n[2], 3)
+    assert gradient.shape == (n[0], n[1], n[2], dimensions)
     max_dev = cp.max(cp.abs(gradient - expected))
     assert cp.allclose(gradient, expected, atol=1e-5, rtol=1e-5), max_dev

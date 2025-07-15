@@ -84,10 +84,6 @@ def spread(
     assert quantity.ndim <= 2, "quantity must have at most 2 dimensions"
     if quantity.ndim == 1:
         quantity = cp.ascontiguousarray(quantity[:, cp.newaxis]).astype(cp.float32)
-    if gradient:
-        assert (
-            quantity.shape[1] == 3
-        ), "quantity must have 3 components for gradient mode"
     if isinstance(pos, np.ndarray):
         pos = cp.array(pos)
     if isinstance(quantity, np.ndarray):
