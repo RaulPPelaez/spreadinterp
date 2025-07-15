@@ -170,18 +170,19 @@ def test_interp(n, numberParticles, is2D, nquantities):
     )
 
 
-def test_interp_gradient_constant():
+@pytest.mark.parametrize("dimensions", [1, 3])
+def test_interp_gradient_constant(dimensions):
     # Interpolate a constant field on a particle located at the center. The result should be zero
     L = 16
     n = 64
     pos = cp.array([[0.0, 0.0, 0.0]], dtype=cp.float32)
-    field = cp.ones((n, n, n, 3), dtype=cp.float32)
+    field = cp.ones((n, n, n, dimensions), dtype=cp.float32)
     direction = cp.ones_like(pos) * cp.array([1, 0, 0])
     L = np.array([L, L, L])
     gradient = spreadinterp.interpolate(
         pos, field, L, gradient=True, gradient_direction=direction
     )
-    assert gradient.shape == pos.shape
+    assert gradient.shape == (pos.shape[0], dimensions)
     assert cp.allclose(gradient, 0.0, atol=1e-5, rtol=1e-5)
 
 

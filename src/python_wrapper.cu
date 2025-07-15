@@ -211,9 +211,6 @@ struct Dot {
 void interpolateField_gradient(pyarray3_c ipos, pyarray_field_c ifield,
                                pyarray_c iquantity, pyarray3_c idirection,
                                real3 L) {
-  if (iquantity.shape(1) != 3) {
-    throw std::runtime_error("Quantity must be 3D");
-  }
   if (idirection.shape(0) != ipos.shape(0)) {
     throw std::runtime_error(
         "Gradient direction must have same number of particles as pos");
