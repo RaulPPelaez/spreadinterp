@@ -96,7 +96,7 @@ private:
 };
 
 struct GradientInterpolationWeightCompute {
-  template <class T2>
+  template <typename T2>
   inline __device__ real3 operator()(real quantity,
                                      thrust::tuple<T2, T2, T2> kernel) const {
     auto [phiX, dphiX] = thrust::get<0>(kernel);
