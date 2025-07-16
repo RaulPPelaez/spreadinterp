@@ -89,7 +89,7 @@ Where:
 
 .. math::
 
-    \boldsymbol{f'}(\boldsymbol{x}) = \partial_{\boldsymbol{x}}\mathcal{S}(\boldsymbol{x})\{\boldsymbol{d}\otimes\boldsymbol{p}\} = \sum_{i=1}^{N} \left(\partial_{\boldsymbol{x}}\delta_a(\boldsymbol{x} - \boldsymbol{x}_i)\cdot\boldsymbol{d}_i\right) \boldsymbol{p}_i
+    \boldsymbol{f'}(\boldsymbol{x}) = \sum_{i=1}^{N} \left(\partial_{\boldsymbol{x}}\delta_a(\boldsymbol{x} - \boldsymbol{x}_i)\cdot\boldsymbol{d}_i\right) \boldsymbol{p}_i
 
 .. note::
    
