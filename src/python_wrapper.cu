@@ -86,16 +86,18 @@ struct KernelBase {
   real width;
   real cellSize;
   real cutoff;
+  real prefactor;
   KernelBase(real cellSize, real width, real cutoff) {
     this->support = 2 * cutoff / cellSize + 1;
     this->width = width;
     this->cellSize = cellSize;
     this->cutoff = cutoff;
+    this->prefactor = pow(2 * M_PI * width * width, -1.5);
   }
   __host__ __device__ real phi(real rr, real3 pos = real3()) const {
     real r = fabs(rr) / cellSize;
     if (fabs(rr) < cutoff) {
-      return exp(-r * r / (real(2.0) * width * width));
+      return prefactor*exp(-r * r / (real(2.0) * width * width));
     } else {
       return 0.0;
     }
@@ -127,16 +129,18 @@ struct DerivativeBase {
   int support;
   real width;
   real cellSize;
+  real prefactor;
   DerivativeBase(real cellSize, real width, real cutoff) {
     this->support = 2 * cutoff / cellSize + 1;
     this->width = width;
     this->cellSize = cellSize;
+    this->prefactor = pow(2 * M_PI * width * width, -1.5);
   }
   __host__ __device__ real phi(real rr, real3 pos = real3()) const {
     real r = fabs(rr) / cellSize;
     if (r < support) {
       real sgn = (rr >= 0) ? 1.0 : -1.0;
-      return -sgn * (r / (width * width)) *
+      return -prefactor*sgn * (r / (width * width)) *
              exp(-r * r / (real(2.0) * width * width));
     } else {
       return 0.0;
