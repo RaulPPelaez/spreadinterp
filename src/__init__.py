@@ -4,7 +4,23 @@ from typing import List, Optional
 import numpy as np
 
 
-def create_kernel(type: str, **kwargs):
+def create_kernel(type: str, **kwargs) -> dict:
+    """Create a kernel for interpolation or spreading.
+
+    Parameters
+    ----------
+    type : str
+        The type of kernel to create. Options are **peskin3pt** or **gaussian**.
+    kwargs : dict
+        Additional parameters for the kernel. For `gaussian`, `width` and `cutoff` must be provided.
+
+    Returns
+    -------
+
+    dict
+        A dictionary representing the kernel with its type and parameters that can be passed to interpolate or spread functions.
+    """
+
     if type == "peskin3pt":
         assert (
             len(kwargs) == 0
@@ -49,7 +65,7 @@ def interpolate(
         The direction of the gradient. Shape (3,).
     kernel : dict, optional
         The kernel to use for interpolation. If None, the default kernel is used.
-        The kernel must be created using `create_kernel` function.
+        The kernel must be created using :py:mod:`spreadinterp.create_kernel` function.
 
     Returns
     -------
@@ -103,7 +119,7 @@ def spread(
         The direction of the gradient. Shape (3,).
     kernel : dict, optional
         The kernel to use for spreading. If None, the default kernel is used.
-        The kernel must be created using `create_kernel` function.
+        The kernel must be created using :py:mod:`spreadinterp.create_kernel` function.
     Returns
     -------
     ndarray
