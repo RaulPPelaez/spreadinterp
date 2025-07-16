@@ -25,3 +25,23 @@ Example
 	  assert res.shape == (numberParticles, 3)
 	  assert cp.allclose(res, 1)
 
+
+Choosing a different kernel
+===========================
+You can choose a different kernel by passing the `kernel` argument to the other functions.
+The available kernels are:
+
+- **peskin3pt**: Peskin 3-point kernel
+- **gaussian**: Gaussian kernel
+
+
+The kernel can be specified as follows:
+
+.. code:: python
+	  
+	  kernel = spreadinterp.create_kernel('peskin3pt')
+	  # kernel = spreadinterp.create_kernel('gaussian', width=1.0, cutoff=4.0)
+	  res = spreadinterp.interpolate(pos, field, L, kernel=kernel)
+	  res = spreadinterp.interpolate(pos, field, L, kernel=kernel)
+
+	  

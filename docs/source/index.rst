@@ -29,7 +29,7 @@ Where:
 - :math:`\mathcal{S}(\boldsymbol{x})` is the spreading operator
 - :math:`\mathcal{J}_{\boldsymbol{x}_i}` is the interpolation operator  
 - :math:`\boldsymbol{x}_i` is the position of particle :math:`i`
-- :math:`\delta_a(\boldsymbol{x} - \boldsymbol{x}_i)` is the spreading kernel
+- :math:`\delta_a(\boldsymbol{x} - \boldsymbol{x}_i)` is the spreading kernel, which can be chosen.
 - :math:`N` is the number of particles
 - :math:`V` is the volume of a particle
 
@@ -89,7 +89,7 @@ Where:
 
 .. math::
 
-    \boldsymbol{f'}(\boldsymbol{x}) = \partial_{\boldsymbol{x}}\mathcal{S}(\boldsymbol{x})\{\boldsymbol{d}\otimes\boldsymbol{p}\} = \sum_{i=1}^{N} \left(\partial_{\boldsymbol{x}}\delta_a(\boldsymbol{x} - \boldsymbol{x}_i)\cdot\boldsymbol{d}_i\right) \boldsymbol{p}_i
+    \boldsymbol{f'}(\boldsymbol{x}) = \sum_{i=1}^{N} \left(\partial_{\boldsymbol{x}}\delta_a(\boldsymbol{x} - \boldsymbol{x}_i)\cdot\boldsymbol{d}_i\right) \boldsymbol{p}_i
 
 .. note::
    

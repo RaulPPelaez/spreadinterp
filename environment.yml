@@ -4,7 +4,7 @@ channels:
 dependencies:
   - python
   - pip
-  - cuda-version<12.8
+  - cuda-version
   - cuda-libraries-dev
   - cuda-nvcc
   - cuda-cudart
@@ -18,9 +18,9 @@ dependencies:
   - cupy
   - numpy
   - pip:
-    - sphinx==7.2.6
-    - sphinx-rtd-theme==1.3.0
-    - sphinxcontrib-autoprogram==0.1.8
+    - sphinx==8.2.3
+    - sphinx-rtd-theme==3.0.2
+    - sphinxcontrib-autoprogram==0.1.9
     - sphinxcontrib-napoleon==0.7
     - gitpython
 

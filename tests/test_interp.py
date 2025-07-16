@@ -47,7 +47,48 @@ def peskin_3pt_derivative(rp, h):
     return phi
 
 
-def manual_spread(pos, quantity, L, n):
+def gaussian(rr, h, width, cutoff):
+    """Computes the Gaussian kernel for a given r."""
+    r = cp.abs(rr) / h
+    phi = cp.exp(-0.5 * (r / width) ** 2)
+    mask = cp.abs(rr) >= cutoff
+    phi[mask] = 0.0
+    return phi
+
+
+def gaussian_derivative(rr, h, width, cutoff):
+    """Computes the derivative of the Gaussian kernel for a given r."""
+    sgn = cp.sign(rr)
+    r = cp.abs(rr) / h
+    phi = -sgn * (r / width**2) * cp.exp(-0.5 * (r / width) ** 2)
+    mask = cp.abs(rr) >= cutoff
+    phi[mask] = 0.0
+    return phi
+
+
+def gaussian_integral(h, width, cutoff):
+    """Computes the integral of the Gaussian kernel squared."""
+
+    def integrand(r):
+        return gaussian(r, h, width, cutoff) ** 2
+
+    res = integrate.quad(integrand, -cutoff * h, cutoff * h)[0]
+    return res
+
+
+def find_gaussian_cutoff(width, tolerance=1e-7):
+    cutoff = width * np.sqrt(-2 * np.log(tolerance))
+    return cutoff
+
+
+kernel_functions = {"peskin3pt": peskin_3pt, "gaussian": gaussian}
+kernel_grad_functions = {
+    "peskin3pt": peskin_3pt_derivative,
+    "gaussian": gaussian_derivative,
+}
+
+
+def manual_spread(pos, quantity, L, n, kernel=peskin_3pt):
     h = L / n
     field = cp.zeros((n[0], n[1], n[2], quantity.shape[1]), dtype=cp.float32)
     x, y, z = gen_grid_positions(n, L)
@@ -55,14 +96,14 @@ def manual_spread(pos, quantity, L, n):
         xp = x - pos[i, 0]
         yp = y - pos[i, 1]
         zp = z - pos[i, 2]
-        delta = peskin_3pt(xp, h[0]) * peskin_3pt(yp, h[1]) * peskin_3pt(zp, h[2])
+        delta = kernel(xp, h[0]) * kernel(yp, h[1]) * kernel(zp, h[2])
         field += (
             delta[..., cp.newaxis] * quantity[i][cp.newaxis, cp.newaxis, cp.newaxis]
         )
     return field
 
 
-def manual_interp(pos, field, L):
+def manual_interp(pos, field, L, kernel=peskin_3pt):
     h = L / field.shape[:3]
     x, y, z = gen_grid_positions(field.shape[:3], L)
     quantity = cp.zeros((pos.shape[0], field.shape[3]), dtype=cp.float32)
@@ -73,36 +114,46 @@ def manual_interp(pos, field, L):
         xp = x - pos[i, 0]
         yp = y - pos[i, 1]
         zp = z - pos[i, 2]
-        delta = peskin_3pt(xp, h[0]) * peskin_3pt(yp, h[1])
+        delta = kernel(xp, h[0]) * kernel(yp, h[1])
         if field.shape[2] > 1:
-            delta *= peskin_3pt(zp, h[2])
+            delta *= kernel(zp, h[2])
         quantity[i] = cp.sum(delta[..., cp.newaxis] * field, axis=(0, 1, 2)) * qw
     return quantity
 
 
-@pytest.mark.parametrize("n", [3, 8, 16])
+@pytest.mark.parametrize("n", [32, 16, 8, 3])
 @pytest.mark.parametrize("numberParticles", [1, 32])
 @pytest.mark.parametrize("nquantities", [1, 3, 4, 5, 10])
 @pytest.mark.parametrize("nonregular", [False, True])
-def test_spread(n, numberParticles, nquantities, nonregular):
+@pytest.mark.parametrize("kernel", ["peskin3pt", "gaussian"])
+def test_spread(n, numberParticles, nquantities, nonregular, kernel):
     L = 16
     # Factor is a number between 1.0 and 2.0
-    factor = (np.random.rand(3) + 1.0) if nonregular else 1.0
+    factor = (np.random.rand(3) + 1.0) * 4 if nonregular else 1.0
     L = np.array([L, L, L]) * factor
     n = (np.array([n, n, n]) * factor).astype(int)
-    h = L / n.astype(float)
-    pos = cp.array(
-        (np.random.rand(numberParticles, 3) - 0.5) * (L - 2 * h), dtype=cp.float32
-    ) * (0 if n.min() == 3 else 1)
+    pos = cp.array((np.random.rand(numberParticles, 3) - 0.5), dtype=cp.float32)
     quantity = cp.random.rand(numberParticles, nquantities).astype(cp.float32)
-    field = spreadinterp.spread(pos, quantity, L, n)
-    field_expected = manual_spread(pos, quantity, L, n)
+    if kernel == "peskin3pt":
+        kernel_par = spreadinterp.create_kernel("peskin3pt")
+        kernel_foo = peskin_3pt
+    elif kernel == "gaussian":
+        width = 1.1
+        cutoff = find_gaussian_cutoff(width=width, tolerance=1e-7)
+        h = L / n
+        max_h = np.max(h)
+        min_n = np.min(n)
+        if 2 * cutoff / max_h + 1 >= min_n:
+            pytest.skip("Cutoff is larger than half the grid size, skipping test")
+        kernel_par = spreadinterp.create_kernel("gaussian", width=width, cutoff=cutoff)
+        kernel_foo = lambda r, h: gaussian(r, h, width, cutoff)
+    field = spreadinterp.spread(pos, quantity, L, n, kernel=kernel_par)
+    field_expected = manual_spread(pos, quantity, L, n, kernel=kernel_foo)
     assert field.shape == (n[0], n[1], n[2], nquantities)
     assert field.dtype == cp.float32
     assert field.device == pos.device
-    assert np.allclose(field.get(), field_expected.get(), atol=1e-5, rtol=1e-5), np.max(
-        field.get() - field_expected.get()
-    )
+    max_dev = cp.max(cp.abs(field - field_expected))
+    assert cp.allclose(field, field_expected, atol=1e-5, rtol=1e-5), max_dev
 
 
 import scipy.integrate as integrate
@@ -115,7 +166,8 @@ def peskin_integral(h):
 
 @pytest.mark.parametrize("is2D", [False, True])
 @pytest.mark.parametrize("nonregular", [False, True])
-def test_spreadinterp(is2D, nonregular):
+@pytest.mark.parametrize("kernel", ["peskin3pt", "gaussian"])
+def test_spreadinterp(is2D, nonregular, kernel):
     # JS1 = 1/dV
     # Where dV is the integral of the kernel squared: \int \delta_a(\vec{r})^2 dr^3
     # This test checks that the spread and interpolate functions are adjoint
@@ -131,12 +183,29 @@ def test_spreadinterp(is2D, nonregular):
         pos[:, 2] = 0
         L[2] = 0
         n[2] = 1
-    field = spreadinterp.spread(pos, quantity, L, n)
-    dV = peskin_integral(h[0]) * peskin_integral(h[1])
-    if not is2D:
-        dV *= peskin_integral(h[2])
-
-    quantity_reconstructed = spreadinterp.interpolate(pos, field, L) / dV
+    if kernel == "peskin3pt":
+        kernel_par = spreadinterp.create_kernel("peskin3pt")
+        dV = peskin_integral(h[0]) * peskin_integral(h[1])
+        if not is2D:
+            dV *= peskin_integral(h[2])
+    elif kernel == "gaussian":
+        width = 1.1
+        cutoff = find_gaussian_cutoff(width=width, tolerance=1e-4)
+        h = L / n
+        max_h = np.max(h)
+        min_n = np.min(n)
+        if 2 * cutoff / max_h + 1 >= min_n:
+            pytest.skip("Cutoff is larger than half the grid size, skipping test")
+        kernel_par = spreadinterp.create_kernel("gaussian", width=width, cutoff=cutoff)
+        dV = gaussian_integral(h[0], width, cutoff) * gaussian_integral(
+            h[1], width, cutoff
+        )
+        if not is2D:
+            dV *= gaussian_integral(h[2], width, cutoff)
+    field = spreadinterp.spread(pos, quantity, L, n, kernel=kernel_par)
+    quantity_reconstructed = (
+        spreadinterp.interpolate(pos, field, L, kernel=kernel_par) / dV
+    )
     assert cp.allclose(
         quantity.get(), quantity_reconstructed.get(), atol=1e-4, rtol=1e-4
     )
@@ -236,7 +305,8 @@ def test_interp_gradient_radial():
 
 @pytest.mark.parametrize("direction", [0, 1, 2])
 @pytest.mark.parametrize("dimensions", [1, 3])
-def test_spread_gradient(direction, dimensions):
+@pytest.mark.parametrize("kernel", ["peskin3pt", "gaussian"])
+def test_spread_gradient(direction, dimensions, kernel):
     # Spread a quantity on a particle located at (0,0,0). The resulting field should be:
     # (dS_x*d_x + dS_y*d_y + dS_z*d_z)*quantity
     # dS_alpha = \prod_{\beta \neq \alpha} \delta_\beta * d\delta_\alpha
@@ -246,19 +316,33 @@ def test_spread_gradient(direction, dimensions):
     pos = cp.array([[0.0, 0.0, 0.0]], dtype=cp.float32)
     quantity = cp.ones((1, dimensions), dtype=cp.float32)
     x, y, z = gen_grid_positions(n, L)
-    Sx = peskin_3pt(x, L[0] / n[0])
-    Sy = peskin_3pt(y, L[1] / n[1])
-    Sz = peskin_3pt(z, L[2] / n[2])
-    dSx = peskin_3pt_derivative(pos[0, 0] - x, L[0] / n[0]) * Sy * Sz
-    dSy = peskin_3pt_derivative(pos[0, 1] - y, L[1] / n[1]) * Sx * Sz
-    dSz = peskin_3pt_derivative(pos[0, 2] - z, L[2] / n[2]) * Sx * Sy
+    extra_args = {}
+    if kernel == "gaussian":
+        width = 2.0
+        cutoff = find_gaussian_cutoff(width=width, tolerance=1e-7)
+        extra_args["width"] = width
+        extra_args["cutoff"] = cutoff
+    kern_f = kernel_functions[kernel]
+    kern_grad_f = kernel_grad_functions[kernel]
+    Sx = kern_f(x, L[0] / n[0], **extra_args)
+    Sy = kern_f(y, L[1] / n[1], **extra_args)
+    Sz = kern_f(z, L[2] / n[2], **extra_args)
+    dSx = kern_grad_f(pos[0, 0] - x, L[0] / n[0], **extra_args) * Sy * Sz
+    dSy = kern_grad_f(pos[0, 1] - y, L[1] / n[1], **extra_args) * Sx * Sz
+    dSz = kern_grad_f(pos[0, 2] - z, L[2] / n[2], **extra_args) * Sx * Sy
     d = cp.zeros((1, 3))
     d[:, direction] = 1
     delta = dSx * d[0, 0] + dSy * d[0, 1] + dSz * d[0, 2]
     expected = cp.array(delta[..., None] * quantity)
     assert expected.shape == (n[0], n[1], n[2], dimensions)
     gradient = spreadinterp.spread(
-        pos, quantity, L, n, gradient=True, gradient_direction=d
+        pos,
+        quantity,
+        L,
+        n,
+        gradient=True,
+        gradient_direction=d,
+        kernel=spreadinterp.create_kernel(kernel, **extra_args),
     )
     assert gradient.shape == (n[0], n[1], n[2], dimensions)
     max_dev = cp.max(cp.abs(gradient - expected))

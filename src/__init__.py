@@ -4,12 +4,47 @@ from typing import List, Optional
 import numpy as np
 
 
+def create_kernel(type: str, **kwargs) -> dict:
+    """Create a kernel for interpolation or spreading.
+
+    Parameters
+    ----------
+    type : str
+        The type of kernel to create. Options are **peskin3pt** or **gaussian**.
+    kwargs : dict
+        Additional parameters for the kernel. For `gaussian`, `width` and `cutoff` must be provided.
+
+    Returns
+    -------
+
+    dict
+        A dictionary representing the kernel with its type and parameters that can be passed to interpolate or spread functions.
+    """
+
+    if type == "peskin3pt":
+        assert (
+            len(kwargs) == 0
+        ), "No additional parameters are required for peskin3pt kernel"
+        return {"type": "peskin3pt"}
+    elif type == "gaussian":
+        assert "width" in kwargs, "width must be provided for gaussian kernel"
+        gaussian_width = kwargs["width"]
+        assert isinstance(
+            gaussian_width, (int, float)
+        ), "gaussian_width must be a number"
+        assert gaussian_width > 0, "gaussian_width must be positive"
+        cutoff = kwargs.get("cutoff", 4.0 * gaussian_width)
+        assert isinstance(cutoff, (int, float)), "cutoff must be a number if provided"
+        return {"type": "gaussian", "width": gaussian_width, "cutoff": cutoff}
+
+
 def interpolate(
     pos: cp.ndarray,
     grid_data: cp.ndarray,
     L: List,
     gradient: bool = False,
     gradient_direction: Optional[List] = None,
+    kernel: Optional[dict] = None,
 ) -> cp.ndarray:
     """Interpolate a field defined on a grid to a set of points.
        Field is assumed to be defined on a regular grid with periodic boundary conditions.
@@ -28,6 +63,9 @@ def interpolate(
         Whether to interpolate using the gradient of the kernel.
     gradient_direction : ndarray
         The direction of the gradient. Shape (3,).
+    kernel : dict, optional
+        The kernel to use for interpolation. If None, the default kernel is used.
+        The kernel must be created using :py:mod:`spreadinterp.create_kernel` function.
 
     Returns
     -------
@@ -37,6 +75,8 @@ def interpolate(
     """
     assert grid_data.ndim >= 3, "grid_data must have at least 3 dimensions"
     assert grid_data.ndim <= 4, "grid_data must have at most 4 dimensions"
+    if kernel is None:
+        kernel = create_kernel("peskin3pt")
     if isinstance(pos, np.ndarray):
         pos = cp.array(pos)
     if isinstance(grid_data, np.ndarray):
@@ -45,7 +85,7 @@ def interpolate(
         grid_data = cp.ascontiguousarray(grid_data[:, :, :, cp.newaxis])
     nf = grid_data.shape[3]
     result = cp.zeros((pos.shape[0], nf), dtype=cp.float32)
-    interpolateField(pos, grid_data, result, L, gradient, gradient_direction)
+    interpolateField(pos, grid_data, result, L, gradient, gradient_direction, kernel)
     return result
 
 
@@ -56,6 +96,7 @@ def spread(
     n: List,
     gradient=False,
     gradient_direction: Optional[List] = None,
+    kernel: Optional[dict] = None,
 ) -> cp.ndarray:
     """
     Spread a quantity defined at a set of points to a grid.
@@ -76,6 +117,9 @@ def spread(
         Whether to spread using the gradient of the kernel.
     gradient_direction : ndarray
         The direction of the gradient. Shape (3,).
+    kernel : dict, optional
+        The kernel to use for spreading. If None, the default kernel is used.
+        The kernel must be created using :py:mod:`spreadinterp.create_kernel` function.
     Returns
     -------
     ndarray
@@ -88,6 +132,8 @@ def spread(
         pos = cp.array(pos)
     if isinstance(quantity, np.ndarray):
         quantity = cp.array(quantity)
+    if kernel is None:
+        kernel = create_kernel("peskin3pt")
     result = cp.zeros((n[0], n[1], n[2], quantity.shape[-1]), dtype=cp.float32)
-    spreadParticles(pos, quantity, result, L, n, gradient, gradient_direction)
+    spreadParticles(pos, quantity, result, L, n, gradient, gradient_direction, kernel)
     return result
