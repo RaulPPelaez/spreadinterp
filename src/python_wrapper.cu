@@ -92,7 +92,7 @@ struct KernelBase {
     this->width = width;
     this->cellSize = cellSize;
     this->cutoff = cutoff;
-    this->prefactor = cbrt(pow(2 * M_PI * width * width, -0.5));
+    this->prefactor = pow(2 * M_PI * width * width, -0.5);
   }
   __host__ __device__ real phi(real rr, real3 pos = real3()) const {
     real r = fabs(rr) / cellSize;
