@@ -50,7 +50,7 @@ def peskin_3pt_derivative(rp, h):
 def gaussian(rr, h, width, cutoff):
     """Computes the Gaussian kernel for a given r."""
     r = cp.abs(rr) / h
-    phi = (2 * np.pi * width * width) ** (-1.5) * cp.exp(-0.5 * (r / width) ** 2)
+    phi = (2 * np.pi * width * width) ** (-0.5) * cp.exp(-0.5 * (r / width) ** 2)
     mask = cp.abs(rr) >= cutoff
     phi[mask] = 0.0
     return phi
@@ -62,7 +62,7 @@ def gaussian_derivative(rr, h, width, cutoff):
     r = cp.abs(rr) / h
     phi = (
         -sgn
-        * (2 * np.pi * width * width) ** (-1.5)
+        * (2 * np.pi * width * width) ** (-0.5)
         * (r / width**2)
         * cp.exp(-0.5 * (r / width) ** 2)
     )
