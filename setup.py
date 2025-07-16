@@ -17,10 +17,12 @@ class CMakeBuild(build_ext):
             self.build_extension(ext)
 
     def build_extension(self, ext):
+        extra_cmake_args = os.environ.get("CMAKE_ARGS", "")
         cmake_args = [
             "-DCMAKE_BUILD_TYPE=Release",
             "-DCMAKE_INSTALL_PREFIX=" + sys.prefix,
         ]
+        cmake_args += extra_cmake_args.split()
         build_args = ["--config", "Release"]
 
         if not os.path.exists(self.build_temp):
