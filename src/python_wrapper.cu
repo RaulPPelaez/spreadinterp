@@ -87,7 +87,7 @@ struct KernelBase {
   real cellSize;
   real cutoff;
   KernelBase(real cellSize, real width, real cutoff) {
-    this->support = 2*cutoff / cellSize+1;
+    this->support = 2 * cutoff / cellSize + 1;
     this->width = width;
     this->cellSize = cellSize;
     this->cutoff = cutoff;
@@ -128,7 +128,7 @@ struct DerivativeBase {
   real width;
   real cellSize;
   DerivativeBase(real cellSize, real width, real cutoff) {
-    this->support = 2*cutoff / cellSize+1;
+    this->support = 2 * cutoff / cellSize + 1;
     this->width = width;
     this->cellSize = cellSize;
   }
