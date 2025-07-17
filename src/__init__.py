@@ -84,7 +84,7 @@ def interpolate(
     if grid_data.ndim == 3:
         grid_data = cp.ascontiguousarray(grid_data[:, :, :, cp.newaxis])
     nf = grid_data.shape[3]
-    result = cp.zeros((pos.shape[0], nf), dtype=cp.float64)
+    result = cp.zeros((pos.shape[0], nf), dtype=cp.float32)
     interpolateField(pos, grid_data, result, L, gradient, gradient_direction, kernel)
     return result
 
