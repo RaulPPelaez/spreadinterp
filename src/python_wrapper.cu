@@ -139,7 +139,7 @@ struct DerivativeBase {
   }
   __host__ __device__ real phi(real rr, real3 pos = real3()) const {
     if (fabs(rr) < cutoff) {
-      return prefactor * (rr / (width * width)) *
+      return -prefactor * (rr / (width * width)) *
              exp(-rr * rr / (real(2.0) * width * width));
     } else {
       return 0.0;
