@@ -385,7 +385,7 @@ void interpolateField_gradient(pyarray3_c ipos, pyarray_field_c ifield,
                wc, int(ipos.shape(0)));
     auto qa_it = thrust::make_permutation_iterator(
         q_it, thrust::make_transform_iterator(thrust::make_counting_iterator(0),
-                                              Permute(3, i)));
+                                              Permute(iquantity.shape(1), i)));
     thrust::transform(thrust::cuda::par, qd.begin(), qd.end(), d_ptr, qa_it,
                       Dot());
   }
