@@ -85,6 +85,7 @@ def interpolate(
         grid_data = cp.ascontiguousarray(grid_data[:, :, :, cp.newaxis])
     nf = grid_data.shape[3]
     result = cp.zeros((pos.shape[0], nf), dtype=pos.dtype)
+    L = cp.array(L, dtype=pos.dtype)
     interpolateField(pos, grid_data, result, L, gradient, gradient_direction, kernel)
     return result
 
@@ -134,6 +135,8 @@ def spread(
         quantity = cp.array(quantity)
     if kernel is None:
         kernel = create_kernel("peskin3pt")
+    L = cp.array(L, dtype=pos.dtype)
+    n = cp.array(n, dtype=cp.int32)
     result = cp.zeros((n[0], n[1], n[2], quantity.shape[-1]), dtype=pos.dtype)
     spreadParticles(pos, quantity, result, L, n, gradient, gradient_direction, kernel)
     return result
