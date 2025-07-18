@@ -127,7 +127,7 @@ def spread(
     """
     assert quantity.ndim <= 2, "quantity must have at most 2 dimensions"
     if quantity.ndim == 1:
-        quantity = cp.ascontiguousarray(quantity[:, cp.newaxis]).astype(cp.float32)
+        quantity = quantity.reshape(-1, 1)
     if isinstance(pos, np.ndarray):
         pos = cp.array(pos)
     if isinstance(quantity, np.ndarray):
