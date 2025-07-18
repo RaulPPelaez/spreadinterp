@@ -21,6 +21,10 @@ FetchContent_Declare(
   GIT_TAG        v2.8.7
 )
 FetchContent_MakeAvailable(uammd)
+option(DOUBLE_PRECISION "Use double precision" OFF)
+if(DOUBLE_PRECISION)
+  add_compile_definitions(DOUBLE_PRECISION)
+endif()
 nanobind_add_module(
   _spreadinterp
   STABLE_ABI

@@ -95,9 +95,8 @@ struct KernelBase {
     this->prefactor = pow(2 * M_PI * width * width, -0.5);
   }
   __host__ __device__ real phi(real rr, real3 pos = real3()) const {
-    real r = fabs(rr) / cellSize;
     if (fabs(rr) < cutoff) {
-      return prefactor*exp(-r * r / (real(2.0) * width * width));
+      return prefactor * exp(-rr * rr / (real(2.0) * width * width));
     } else {
       return 0.0;
     }
@@ -130,18 +129,18 @@ struct DerivativeBase {
   real width;
   real cellSize;
   real prefactor;
+  real cutoff;
   DerivativeBase(real cellSize, real width, real cutoff) {
     this->support = 2 * cutoff / cellSize + 1;
     this->width = width;
     this->cellSize = cellSize;
     this->prefactor = pow(2 * M_PI * width * width, -0.5);
+    this->cutoff = cutoff;
   }
   __host__ __device__ real phi(real rr, real3 pos = real3()) const {
-    real r = fabs(rr) / cellSize;
-    if (r < support) {
-      real sgn = (rr >= 0) ? 1.0 : -1.0;
-      return -prefactor*sgn * (r / (width * width)) *
-             exp(-r * r / (real(2.0) * width * width));
+    if (fabs(rr) < cutoff) {
+      return -prefactor * (rr / (width * width)) *
+             exp(-rr * rr / (real(2.0) * width * width));
     } else {
       return 0.0;
     }
@@ -386,7 +385,7 @@ void interpolateField_gradient(pyarray3_c ipos, pyarray_field_c ifield,
                wc, int(ipos.shape(0)));
     auto qa_it = thrust::make_permutation_iterator(
         q_it, thrust::make_transform_iterator(thrust::make_counting_iterator(0),
-                                              Permute(3, i)));
+                                              Permute(iquantity.shape(1), i)));
     thrust::transform(thrust::cuda::par, qd.begin(), qd.end(), d_ptr, qa_it,
                       Dot());
   }

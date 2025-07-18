@@ -84,7 +84,7 @@ def interpolate(
     if grid_data.ndim == 3:
         grid_data = cp.ascontiguousarray(grid_data[:, :, :, cp.newaxis])
     nf = grid_data.shape[3]
-    result = cp.zeros((pos.shape[0], nf), dtype=cp.float32)
+    result = cp.zeros((pos.shape[0], nf), dtype=pos.dtype)
     interpolateField(pos, grid_data, result, L, gradient, gradient_direction, kernel)
     return result
 
@@ -127,13 +127,13 @@ def spread(
     """
     assert quantity.ndim <= 2, "quantity must have at most 2 dimensions"
     if quantity.ndim == 1:
-        quantity = cp.ascontiguousarray(quantity[:, cp.newaxis]).astype(cp.float32)
+        quantity = quantity.reshape(-1, 1)
     if isinstance(pos, np.ndarray):
         pos = cp.array(pos)
     if isinstance(quantity, np.ndarray):
         quantity = cp.array(quantity)
     if kernel is None:
         kernel = create_kernel("peskin3pt")
-    result = cp.zeros((n[0], n[1], n[2], quantity.shape[-1]), dtype=cp.float32)
+    result = cp.zeros((n[0], n[1], n[2], quantity.shape[-1]), dtype=pos.dtype)
     spreadParticles(pos, quantity, result, L, n, gradient, gradient_direction, kernel)
     return result
