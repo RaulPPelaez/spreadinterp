@@ -3,6 +3,15 @@ Installation
 
 We recommend working with a `conda <https://docs.conda.io/en/latest/>`_ environment.
 
+Install from conda (recommended)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You can install the library from the ``stochasticHydroTools`` Anaconda channel with:
+
+.. code-block:: shell
+
+	$ conda install -c stochasticHydroTools spreadinterp
+
 Compilation from source
 ~~~~~~~~~~~~~~~~~~~~~~~
 
