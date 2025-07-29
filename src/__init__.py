@@ -78,11 +78,13 @@ def interpolate(
     if kernel is None:
         kernel = create_kernel("peskin3pt")
     if isinstance(pos, np.ndarray):
-        pos = cp.array(pos)
+        pos = cp.array(pos, dtype=np.float32)
     if isinstance(grid_data, np.ndarray):
-        grid_data = cp.array(grid_data)
+        grid_data = cp.array(grid_data, dtype=np.float32)
     if grid_data.ndim == 3:
-        grid_data = cp.ascontiguousarray(grid_data[:, :, :, cp.newaxis])
+        grid_data = grid_data[:, :, :, cp.newaxis]
+    pos = cp.ascontiguousarray(pos, dtype=np.float32)
+    grid_data = cp.ascontiguousarray(grid_data, dtype=np.float32)
     nf = grid_data.shape[3]
     result = cp.zeros((pos.shape[0], nf), dtype=pos.dtype)
     L = np.array(L, dtype=pos.dtype)
@@ -130,11 +132,13 @@ def spread(
     if quantity.ndim == 1:
         quantity = quantity.reshape(-1, 1)
     if isinstance(pos, np.ndarray):
-        pos = cp.array(pos)
+        pos = cp.array(pos, dtype=np.float32)
     if isinstance(quantity, np.ndarray):
-        quantity = cp.array(quantity)
+        quantity = cp.array(quantity, dtype=np.float32)
     if kernel is None:
         kernel = create_kernel("peskin3pt")
+    pos = cp.ascontiguousarray(pos, dtype=np.float32)
+    quantity = cp.ascontiguousarray(quantity, dtype=np.float32)
     L = np.array(L, dtype=pos.dtype)
     n = np.array(n, dtype=np.int32)
     result = cp.zeros((n[0], n[1], n[2], quantity.shape[-1]), dtype=pos.dtype)
